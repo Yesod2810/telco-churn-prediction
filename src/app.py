@@ -10,11 +10,17 @@ st.markdown("Nhập thông tin khách hàng để xem tỷ lệ rủi ro hủy d
 # --- 1. TẢI MÔ HÌNH VÀ CẤU TRÚC CỘT ---
 @st.cache_resource # Giúp load mô hình 1 lần duy nhất để app chạy nhanh
 def load_model():
-    model = joblib.load('xgboost_churn_model.pkl')
-    cols = joblib.load('model_columns.pkl')
+    # Lấy thư mục hiện tại của file app.py (tức là thư mục src/)
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    # Nối đường dẫn tuyệt đối đến các file .pkl
+    model_path = os.path.join(current_dir, 'xgboost_churn_model.pkl')
+    cols_path = os.path.join(current_dir, 'model_columns.pkl')
+    
+    # Load file
+    model = joblib.load(model_path)
+    cols = joblib.load(cols_path)
     return model, cols
-
-xgb_model, model_columns = load_model()
 
 # --- 2. GIAO DIỆN NHẬP LIỆU (USER INPUTS) ---
 st.header("📋 Thông tin Khách hàng")
