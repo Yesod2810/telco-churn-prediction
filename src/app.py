@@ -23,6 +23,8 @@ def load_model():
     cols = joblib.load(cols_path)
     return model, cols
 
+xgb_model, model_columns = load_model()
+
 # --- 2. GIAO DIỆN NHẬP LIỆU (USER INPUTS) ---
 st.header("📋 Thông tin Khách hàng")
 col1, col2 = st.columns(2)
