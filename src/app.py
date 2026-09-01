@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import joblib
+import os
 
 # --- CẤU HÌNH TRANG ---
 st.set_page_config(page_title="Churn Prediction App", page_icon="📊", layout="centered")
