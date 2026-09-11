@@ -41,29 +41,95 @@ with col2:
     contract = st.selectbox("Loại hợp đồng", ["Month-to-month", "One year", "Two year"])
     internet = st.selectbox("Dịch vụ Internet", ["Fiber optic", "DSL", "No"])
 
-# --- 3. XỬ LÝ DỮ LIỆU ĐỂ DỰ ĐOÁN (DATA PROCESSING) ---
-if st.button("🚀 Phân Tích Rủi Ro", type="primary"):
-    
-    # Tạo một dictionary chứa tất cả các cột của mô hình, mặc định bằng 0
-    input_data = {col: 0 for col in model_columns}
-    
-    # Gán các giá trị số nguyên/thực
-    input_data['tenure'] = tenure
-    input_data['MonthlyCharges'] = monthly_charges
-    input_data['TotalCharges'] = total_charges
-    
-    # Xử lý One-Hot Encoding cho các biến phân loại
-    # Cấu trúc tên cột One-Hot thường là: TênCột_GiáTrị
-    contract_col = f"Contract_{contract}"
-    if contract_col in input_data:
-        input_data[contract_col] = 1
-        
-    internet_col = f"InternetService_{internet}"
-    if internet_col in input_data:
-        input_data[internet_col] = 1
+# --- KHỐI 3: TẠO TAB GIAO DIỆN ---
+tab1, tab2 = st.tabs(["👤 Dự đoán Cá nhân", "📁 Dự đoán Hàng loạt (CSV)"])
 
-    # Chuyển đổi thành DataFrame với 1 dòng duy nhất
-    input_df = pd.DataFrame([input_data])
+# ==========================================
+# TAB 1: DỰ ĐOÁN CÁ NHÂN (CODE CŨ CỦA BẠN)
+# ==========================================
+with tab1:
+    st.header("📋 Thông tin Khách hàng")
+    col1, col2 = st.columns(2)
+
+    with col1:
+        tenure = st.number_input("Thâm niên sử dụng (Tháng)", min_value=0, max_value=72, value=12)
+        monthly_charges = st.number_input("Cước phí hàng tháng ($)", min_value=15.0, max_value=120.0, value=70.0)
+        total_charges = st.number_input("Tổng cước phí ($)", min_value=15.0, max_value=8600.0, value=840.0)
+
+    with col2:
+        contract = st.selectbox("Loại hợp đồng", ["Month-to-month", "One year", "Two year"])
+        internet = st.selectbox("Dịch vụ Internet", ["Fiber optic", "DSL", "No"])
+
+    if st.button("🚀 Phân Tích Rủi Ro", type="primary", key="single_predict"):
+        # ... (Toàn bộ code xử lý, Gauge Chart và SHAP của bạn đặt thụt lề vào đây) ...
+        pass
+
+
+# ==========================================
+# TAB 2: DỰ ĐOÁN HÀNG LOẠT (TÍNH NĂNG MỚI)
+# ==========================================
+with tab2:
+    st.header("📂 Tải lên danh sách khách hàng")
+    st.markdown("Vui lòng tải lên file `.csv` chứa các cột: `CustomerID` (tùy chọn), `tenure`, `MonthlyCharges`, `TotalCharges`, `Contract`, `InternetService`.")
+    
+    # Nút upload file
+    uploaded_file = st.file_uploader("Chọn file CSV", type=['csv'])
+    
+    if uploaded_file is not None:
+        import numpy as np
+        
+        # Đọc dữ liệu khách hàng tải lên
+        batch_df = pd.read_csv(uploaded_file)
+        st.write("👀 Preview dữ liệu tải lên:")
+        st.dataframe(batch_df.head(3))
+        
+        if st.button("🚀 Phân Tích Hàng Loạt", type="primary", key="batch_predict"):
+            with st.spinner('Đang xử lý dữ liệu bằng Trí tuệ Nhân tạo...'):
+                result_df = batch_df.copy()
+                
+                # Tạo một DataFrame chứa toàn số 0 với cấu trúc cột chuẩn của mô hình
+                input_matrix = pd.DataFrame(0, index=np.arange(len(batch_df)), columns=model_columns)
+                
+                # Điền dữ liệu dạng số
+                for col in ['tenure', 'MonthlyCharges', 'TotalCharges']:
+                    if col in batch_df.columns:
+                        # Ép kiểu dữ liệu tránh lỗi khoảng trắng
+                        input_matrix[col] = pd.to_numeric(batch_df[col], errors='coerce').fillna(0)
+                        
+                # Xử lý One-Hot Encoding tự động cho hàng loạt dòng
+                if 'Contract' in batch_df.columns:
+                    for idx, val in batch_df['Contract'].items():
+                        col_name = f"Contract_{val}"
+                        if col_name in model_columns:
+                            input_matrix.at[idx, col_name] = 1
+                            
+                if 'InternetService' in batch_df.columns:
+                    for idx, val in batch_df['InternetService'].items():
+                        col_name = f"InternetService_{val}"
+                        if col_name in model_columns:
+                            input_matrix.at[idx, col_name] = 1
+                            
+                # Dự đoán xác suất cho toàn bộ danh sách
+                probs = xgb_model.predict_proba(input_matrix)[:, 1] * 100
+                
+                # Gắn kết quả dự đoán vào bảng hiển thị
+                result_df['Xác suất Rời bỏ (%)'] = np.round(probs, 2)
+                result_df['Cảnh báo'] = result_df['Xác suất Rời bỏ (%)'].apply(lambda x: '🔴 Nguy hiểm' if x > 50 else '🟢 An toàn')
+                
+                # Lọc ra nhóm khách hàng rủi ro cao để hiển thị ưu tiên
+                high_risk_df = result_df[result_df['Xác suất Rời bỏ (%)'] > 50].sort_values(by='Xác suất Rời bỏ (%)', ascending=False)
+                
+                st.subheader(f"⚠️ Đã phát hiện {len(high_risk_df)} khách hàng có rủi ro cao!")
+                st.dataframe(high_risk_df)
+                
+                # Tạo nút tải file báo cáo định dạng CSV (hỗ trợ tiếng Việt với utf-8-sig)
+                csv_data = result_df.to_csv(index=False).encode('utf-8-sig')
+                st.download_button(
+                    label="⬇️ Tải xuống Báo cáo Tổng hợp (CSV)",
+                    data=csv_data,
+                    file_name="Bao_cao_Du_doan_Churn.csv",
+                    mime="text/csv",
+                )
     
     # --- 4. DỰ ĐOÁN VÀ HIỂN THỊ GAUGE CHART ---
     churn_prob = xgb_model.predict_proba(input_df)[0][1] * 100
