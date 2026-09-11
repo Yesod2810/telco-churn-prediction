@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 import joblib
 import os
+import matplotlib.pyplot as plt
+import shap
 
 # --- CẤU HÌNH TRANG ---
 st.set_page_config(page_title="Churn Prediction App", page_icon="📊", layout="centered")
@@ -74,3 +76,27 @@ if st.button("🚀 Phân Tích Rủi Ro", type="primary"):
     else:
         st.success(f"✅ Rủi ro Rời bỏ THẤP: {churn_prob:.1f}%")
         st.write("Khách hàng đang hài lòng với dịch vụ. Hãy tiếp tục duy trì!")
+        
+    # --- 5. GIẢI THÍCH MÔ HÌNH VỚI SHAP ---
+    st.divider() # Tạo đường kẻ ngang phân cách
+    st.subheader("🧠 Giải thích chi tiết từ Trí tuệ Nhân tạo (SHAP)")
+    st.markdown("Biểu đồ dưới đây thể hiện lý do tại sao mô hình đưa ra quyết định này. Màu đỏ làm **tăng** rủi ro rời bỏ, màu xanh làm **giảm** rủi ro.")
+        
+    # Khởi tạo bộ giải thích SHAP cho mô hình XGBoost
+    explainer = shap.Explainer(xgb_model)
+        
+    # Tính toán giá trị SHAP cho dòng dữ liệu khách hàng hiện tại
+    shap_values = explainer(input_df)
+        
+    # Tạo khung vẽ biểu đồ (Figure) để nhúng vào Streamlit
+    fig, ax = plt.subplots(figsize=(8, 4))
+        
+    # Vẽ biểu đồ thác nước (Waterfall plot)
+    # Lấy shap_values[0] vì input_df chỉ có 1 dòng (1 khách hàng)
+    shap.plots.waterfall(shap_values[0], show=False)
+        
+    # Tùy chỉnh layout để chữ không bị cắt
+    plt.tight_layout()
+        
+    # Hiển thị biểu đồ lên Streamlit
+    st.pyplot(fig)
