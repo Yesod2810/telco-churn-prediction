@@ -48,6 +48,24 @@ with tab1:
         internet = st.selectbox("Dịch vụ Internet", ["Fiber optic", "DSL", "No"])
 
     if st.button("🚀 Phân Tích Rủi Ro", type="primary", key="single_predict"):
+        # --- TẠO input_df TỪ GIAO DIỆN ---
+        input_data = {col: 0 for col in model_columns}
+        
+        input_data['tenure'] = tenure
+        input_data['MonthlyCharges'] = monthly_charges
+        input_data['TotalCharges'] = total_charges
+        
+        contract_col = f"Contract_{contract}"
+        if contract_col in input_data:
+            input_data[contract_col] = 1
+            
+        internet_col = f"InternetService_{internet}"
+        if internet_col in input_data:
+            input_data[internet_col] = 1
+
+        input_df = pd.DataFrame([input_data])
+        # --- KẾT THÚC ĐOẠN BỊ THIẾU ---
+        
         # --- 4. DỰ ĐOÁN VÀ HIỂN THỊ GAUGE CHART ---
         churn_prob = xgb_model.predict_proba(input_df)[0][1] * 100
             
