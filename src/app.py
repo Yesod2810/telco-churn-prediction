@@ -4,6 +4,7 @@ import joblib
 import os
 import matplotlib.pyplot as plt
 import shap
+import plotly.graph_objects as go
 
 # --- CẤU HÌNH TRANG ---
 st.set_page_config(page_title="Churn Prediction App", page_icon="📊", layout="centered")
@@ -64,18 +65,50 @@ if st.button("🚀 Phân Tích Rủi Ro", type="primary"):
     # Chuyển đổi thành DataFrame với 1 dòng duy nhất
     input_df = pd.DataFrame([input_data])
     
-    # --- 4. DỰ ĐOÁN VÀ HIỂN THỊ ---
-    # predict_proba trả về mảng 2 chiều [xác_suất_0, xác_suất_1]
+    # --- 4. DỰ ĐOÁN VÀ HIỂN THỊ GAUGE CHART ---
     churn_prob = xgb_model.predict_proba(input_df)[0][1] * 100
-    
-    st.subheader("💡 Kết quả phân tích:")
-    
+        
+    st.subheader("💡 Kết quả phân tích Rủi ro")
+        
+    # Khởi tạo biểu đồ Gauge
+    fig = go.Figure(go.Indicator(
+        mode = "gauge+number",
+        value = churn_prob,
+        domain = {'x': [0, 1], 'y': [0, 1]},
+        title = {'text': "Xác suất Hủy dịch vụ", 'font': {'size': 18}},
+        gauge = {
+            'axis': {'range': [0, 100], 'tickwidth': 1, 'tickcolor': "darkblue"},
+            'bar': {'color': "#EF553B" if churn_prob > 50 else "#00CC96"}, # Đỏ nếu rủi ro cao, xanh nếu thấp
+            'bgcolor': "white",
+            'borderwidth': 2,
+            'bordercolor': "gray",
+            'steps': [
+                {'range': [0, 33], 'color': "rgba(0, 204, 150, 0.15)"},    # Vùng an toàn
+                {'range': [33, 66], 'color': "rgba(255, 236, 0, 0.15)"},   # Vùng cảnh báo
+                {'range': [66, 100], 'color': "rgba(239, 85, 59, 0.15)"}], # Vùng nguy hiểm
+            'threshold': {
+                'line': {'color': "black", 'width': 3},
+                'thickness': 0.75,
+                'value': churn_prob}
+        }
+    ))
+        
+    # Tùy chỉnh kích thước để biểu đồ gọn gàng hơn
+    fig.update_layout(height=300, margin=dict(l=20, r=20, t=40, b=20))
+        
+    # Hiển thị biểu đồ lên Streamlit
+    st.plotly_chart(fig, use_container_width=True)
+        
+    # Nội suy đề xuất động dựa trên input
     if churn_prob > 50:
-        st.error(f"⚠️ Rủi ro Rời bỏ CAO: {churn_prob:.1f}%")
-        st.write("**Đề xuất:** Cần gửi ngay voucher giảm giá hoặc gọi điện chăm sóc, mời chuyển sang hợp đồng 1 năm.")
+        if internet == 'Fiber optic':
+            st.warning("Đề xuất: Cần cử kỹ thuật viên kiểm tra đường truyền cáp quang của khách hàng này ngay lập tức.")
+        elif tenure < 12:
+            st.warning("Đề xuất: Khách hàng mới có rủi ro cao. Hãy gửi voucher giảm giá 20% cho tháng cước tiếp theo.")
+        else:
+            st.warning("Đề xuất: Gọi điện CSKH để tìm hiểu lý do và mời chuyển sang hợp đồng dài hạn.")
     else:
-        st.success(f"✅ Rủi ro Rời bỏ THẤP: {churn_prob:.1f}%")
-        st.write("Khách hàng đang hài lòng với dịch vụ. Hãy tiếp tục duy trì!")
+        st.success("Tình trạng ổn định: Hãy duy trì chất lượng dịch vụ hiện tại.")
         
     # --- 5. GIẢI THÍCH MÔ HÌNH VỚI SHAP ---
     st.divider() # Tạo đường kẻ ngang phân cách
