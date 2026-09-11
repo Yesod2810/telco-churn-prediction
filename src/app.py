@@ -28,19 +28,6 @@ def load_model():
 
 xgb_model, model_columns = load_model()
 
-# --- 2. GIAO DIỆN NHẬP LIỆU (USER INPUTS) ---
-st.header("📋 Thông tin Khách hàng")
-col1, col2 = st.columns(2)
-
-with col1:
-    tenure = st.number_input("Thâm niên sử dụng (Tháng)", min_value=0, max_value=72, value=12)
-    monthly_charges = st.number_input("Cước phí hàng tháng ($)", min_value=15.0, max_value=120.0, value=70.0)
-    total_charges = st.number_input("Tổng cước phí ($)", min_value=15.0, max_value=8600.0, value=840.0)
-
-with col2:
-    contract = st.selectbox("Loại hợp đồng", ["Month-to-month", "One year", "Two year"])
-    internet = st.selectbox("Dịch vụ Internet", ["Fiber optic", "DSL", "No"])
-
 # --- KHỐI 3: TẠO TAB GIAO DIỆN ---
 tab1, tab2 = st.tabs(["👤 Dự đoán Cá nhân", "📁 Dự đoán Hàng loạt (CSV)"])
 
